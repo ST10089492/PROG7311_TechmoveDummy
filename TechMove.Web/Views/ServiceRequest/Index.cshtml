@@ -1,0 +1,38 @@
+@model IEnumerable<TechMove.Web.Models.ServiceRequest>
+@{ ViewData["Title"] = "Service Requests"; }
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2>Service Requests</h2>
+    <a asp-action="Create" class="btn btn-primary">+ New Request</a>
+</div>
+
+<table class="table table-hover">
+    <thead class="table-dark">
+        <tr>
+            <th>Contract</th>
+            <th>Description</th>
+            <th>Cost (USD)</th>
+            <th>Cost (ZAR)</th>
+            <th>Status</th>
+            <th>Created</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var sr in Model)
+        {
+            <tr>
+                <td>@sr.Contract?.Title</td>
+                <td>@sr.Description</td>
+                <td>$@sr.CostUSD.ToString("N2")</td>
+                <td>R @sr.CostZAR.ToString("N2")</td>
+                <td>@sr.Status</td>
+                <td>@sr.CreatedOn.ToShortDateString()</td>
+                <td>
+                    <a asp-action="Details" asp-route-id="@sr.Id" class="btn btn-sm btn-info">View</a>
+                    <a asp-action="Delete" asp-route-id="@sr.Id" class="btn btn-sm btn-danger">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

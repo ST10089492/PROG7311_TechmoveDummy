@@ -1,0 +1,38 @@
+﻿@{ ViewData["Title"] = "Dashboard"; }
+
+<div class="text-center mb-5">
+    <h1 class="display-5 fw-bold">TechMove Logistics</h1>
+    <p class="lead">Global Logistics Management System : Contract & Service Request Platform</p>
+</div>
+
+<div class="row g-4 justify-content-center">
+    <div class="col-md-4">
+        <div class="card border-primary h-100">
+            <div class="card-body text-center">
+                <h3 class="card-title">Clients</h3>
+                <p class="card-text text-muted">Manage client profiles, contact details and regions.</p>
+                <a asp-controller="Client" asp-action="Index" class="btn btn-primary">View Clients</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-success h-100">
+            <div class="card-body text-center">
+                <h3 class="card-title">Contracts</h3>
+                <p class="card-text text-muted">Create, track and filter contracts. Upload signed agreements.</p>
+                <a asp-controller="Contract" asp-action="Index" class="btn btn-success">View Contracts</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-warning h-100">
+            <div class="card-body text-center">
+                <h3 class="card-title">Service Requests</h3>
+                <p class="card-text text-muted">Log requests with live USD to ZAR currency conversion.</p>
+                <a asp-controller="ServiceRequest" asp-action="Index" class="btn btn-warning">View Requests</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+

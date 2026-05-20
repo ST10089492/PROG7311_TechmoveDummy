@@ -1,0 +1,38 @@
+# build output
+[Bb]in/
+[Oo]bj/
+[Oo]ut/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+
+# visual studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.vsidx
+*.log
+
+# test output
+[Tt]est[Rr]esults/
+*.trx
+*.coverage
+*.coveragexml
+
+# rider / vs code
+.idea/
+.vscode/
+
+# uploaded files (created at runtime)
+**/wwwroot/uploads/
+
+# local sql / ef
+*.mdf
+*.ldf
+
+# os
+.DS_Store
+Thumbs.db

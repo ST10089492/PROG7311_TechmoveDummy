@@ -1,0 +1,63 @@
+@model TechMove.Web.Models.Contract
+@{ ViewData["Title"] = "Contract Details"; }
+
+<h2>@Model.Title</h2>
+<hr />
+
+@{
+    var badgeClass = Model.Status switch {
+        TechMove.Web.Models.ContractStatus.Active  => "bg-success",
+        TechMove.Web.Models.ContractStatus.Expired => "bg-danger",
+        TechMove.Web.Models.ContractStatus.OnHold  => "bg-warning text-dark",
+        _                                          => "bg-secondary"
+    };
+}
+
+<dl class="row">
+    <dt class="col-sm-3">Client</dt>
+    <dd class="col-sm-9">@Model.Client?.Name</dd>
+    <dt class="col-sm-3">Service Level</dt>
+    <dd class="col-sm-9">@Model.ServiceLevel</dd>
+    <dt class="col-sm-3">Status</dt>
+    <dd class="col-sm-9"><span class="badge @badgeClass fs-6">@Model.Status</span></dd>
+    <dt class="col-sm-3">Start Date</dt>
+    <dd class="col-sm-9">@Model.StartDate.ToShortDateString()</dd>
+    <dt class="col-sm-3">End Date</dt>
+    <dd class="col-sm-9">@Model.EndDate.ToShortDateString()</dd>
+    <dt class="col-sm-3">Signed Agreement</dt>
+    <dd class="col-sm-9">
+        @if (!string.IsNullOrEmpty(Model.SignedAgreementPath))
+        {
+            <a href="@Model.SignedAgreementPath" class="btn btn-sm btn-outline-success" download>Download PDF</a>
+        }
+        else { <span class="text-muted">Not uploaded</span> }
+    </dd>
+</dl>
+
+<h4 class="mt-4">Service Requests</h4>
+@if (Model.ServiceRequests.Any())
+{
+    <table class="table table-sm">
+        <thead><tr><th>Description</th><th>Cost (USD)</th><th>Cost (ZAR)</th><th>Status</th><th>Date</th></tr></thead>
+        <tbody>
+            @foreach (var sr in Model.ServiceRequests)
+            {
+                <tr>
+                    <td>@sr.Description</td>
+                    <td>$@sr.CostUSD.ToString("N2")</td>
+                    <td>R @sr.CostZAR.ToString("N2")</td>
+                    <td>@sr.Status</td>
+                    <td>@sr.CreatedOn.ToShortDateString()</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+else
+{
+    <p class="text-muted">No service requests.</p>
+}
+
+<a asp-controller="ServiceRequest" asp-action="Create" asp-route-contractId="@Model.Id" class="btn btn-primary">+ New Service Request</a>
+<a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">Edit</a>
+<a asp-action="Index" class="btn btn-secondary">Back</a>
