@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechMove.Web", "TechMove.We
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechMove.Tests", "TechMove.Tests\TechMove.Tests.csproj", "{473F45AD-AA28-411E-A5B5-F7BC1DE70A28}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TechMove.Api", "TechMove.Api\TechMove.Api.csproj", "{08BA7607-0D6F-4BF1-896B-38BBB89B80FF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{473F45AD-AA28-411E-A5B5-F7BC1DE70A28}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{473F45AD-AA28-411E-A5B5-F7BC1DE70A28}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{473F45AD-AA28-411E-A5B5-F7BC1DE70A28}.Release|Any CPU.Build.0 = Release|Any CPU
+		{08BA7607-0D6F-4BF1-896B-38BBB89B80FF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{08BA7607-0D6F-4BF1-896B-38BBB89B80FF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{08BA7607-0D6F-4BF1-896B-38BBB89B80FF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{08BA7607-0D6F-4BF1-896B-38BBB89B80FF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
