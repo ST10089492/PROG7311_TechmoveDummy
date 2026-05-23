@@ -9,8 +9,13 @@ using TechMove.Api.Services;
 var builder = WebApplication.CreateBuilder(args);
 
 // Database
+// connection string comes from config, but docker compose overrides it with an env var
+// (ConnectionStrings__DefaultConnection) so the same build points at the sql server container.
+// EnableRetryOnFailure lets the api keep trying while the database container is still starting up.
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        sql => sql.EnableRetryOnFailure()));
 
 // Strategy Pattern = currency conversion (same wiring that used to live in the mvc project)
 builder.Services.AddHttpClient<OpenExchangeStrategy>();
