@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TechMove.Api.Data;
@@ -53,6 +54,7 @@ namespace TechMove.Api.Controllers
             return Ok(ToDto(contract));
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<ActionResult<ContractDto>> Create(CreateContractDto dto)
         {
@@ -84,6 +86,7 @@ namespace TechMove.Api.Controllers
         }
 
         // PATCH /api/contracts/5/status to approve, decline or put a contract on hold
+        [Authorize]
         [HttpPatch("{id}/status")]
         public async Task<ActionResult<ContractDto>> UpdateStatus(int id, StatusUpdateDto dto)
         {
@@ -98,6 +101,7 @@ namespace TechMove.Api.Controllers
         }
 
         // uploads the signed agreement pdf for a contract (multipart form data)
+        [Authorize]
         [HttpPost("{id}/agreement")]
         public async Task<IActionResult> UploadAgreement(int id, IFormFile file)
         {
@@ -121,6 +125,7 @@ namespace TechMove.Api.Controllers
             return Ok(new { contract.SignedAgreementPath });
         }
 
+        [Authorize]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

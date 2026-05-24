@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TechMove.Api.Data;
@@ -34,6 +35,7 @@ namespace TechMove.Api.Controllers
             return Ok(ToDto(client));
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<ActionResult<ClientDto>> Create(CreateClientDto dto)
         {
@@ -50,6 +52,7 @@ namespace TechMove.Api.Controllers
             return CreatedAtAction(nameof(GetById), new { id = client.Id }, ToDto(client));
         }
 
+        [Authorize]
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, CreateClientDto dto)
         {
@@ -64,6 +67,7 @@ namespace TechMove.Api.Controllers
             return NoContent();
         }
 
+        [Authorize]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

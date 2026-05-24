@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TechMove.Api.Dtos;
 using TechMove.Api.Models;
@@ -33,6 +34,7 @@ namespace TechMove.Api.Controllers
             return Ok(ToDto(sr));
         }
 
+        [Authorize]
         [HttpPost]
         public async Task<ActionResult<ServiceRequestDto>> Create(CreateServiceRequestDto dto)
         {
@@ -58,6 +60,7 @@ namespace TechMove.Api.Controllers
         }
 
         // PATCH /api/servicerequests/5/status to move it to InProgress or Completed
+        [Authorize]
         [HttpPatch("{id}/status")]
         public async Task<ActionResult<ServiceRequestDto>> UpdateStatus(int id, StatusUpdateDto dto)
         {
@@ -68,6 +71,7 @@ namespace TechMove.Api.Controllers
             return Ok(ToDto(updated!));
         }
 
+        [Authorize]
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {

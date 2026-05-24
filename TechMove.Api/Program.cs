@@ -1,4 +1,8 @@
+using System.Text;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
 using TechMove.Api.Data;
 using TechMove.Api.Patterns.Observer;
 using TechMove.Api.Patterns.Strategy;
@@ -32,11 +36,50 @@ builder.Services.AddScoped<ContractService>();
 builder.Services.AddScoped<ServiceRequestService>();
 builder.Services.AddScoped<FileValidationService>();
 
+// JWT authentication, the signing key and issuer come from config (env vars in the container)
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+        };
+    });
+
 builder.Services.AddControllers();
 
 // Swagger so the api documents itself and can be tested in the browser
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    // adds the Authorize button in swagger so a token can be pasted in for the protected calls
+    options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Name = "Authorization",
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        In = ParameterLocation.Header,
+        Description = "Paste the JWT from /api/auth/login here."
+    });
+    options.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" }
+            },
+            Array.Empty<string>()
+        }
+    });
+});
 
 var app = builder.Build();
 
@@ -47,6 +90,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseStaticFiles(); // lets the uploaded agreement pdfs be downloaded
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
