@@ -23,14 +23,15 @@ namespace TechMove.Api.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ClientDto>>> GetAll()
         {
-            var clients = await _db.Clients.ToListAsync();
+            var clients = await _db.Clients.Include(c => c.Contracts).ToListAsync();
             return Ok(clients.Select(ToDto));
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<ClientDto>> GetById(int id)
         {
-            var client = await _db.Clients.FindAsync(id);
+            var client = await _db.Clients.Include(c => c.Contracts)
+                                          .FirstOrDefaultAsync(c => c.Id == id);
             if (client == null) return NotFound();
             return Ok(ToDto(client));
         }
@@ -84,7 +85,19 @@ namespace TechMove.Api.Controllers
             Id = c.Id,
             Name = c.Name,
             ContactDetails = c.ContactDetails,
-            Region = c.Region
+            Region = c.Region,
+            Contracts = c.Contracts.Select(ct => new ContractDto
+            {
+                Id = ct.Id,
+                Title = ct.Title,
+                StartDate = ct.StartDate,
+                EndDate = ct.EndDate,
+                Status = ct.Status.ToString(),
+                ServiceLevel = ct.ServiceLevel,
+                SignedAgreementPath = ct.SignedAgreementPath,
+                ClientId = ct.ClientId,
+                ClientName = c.Name
+            }).ToList()
         };
     }
 }

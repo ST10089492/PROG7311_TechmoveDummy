@@ -15,6 +15,9 @@ namespace TechMove.Api.Dtos
         public string? SignedAgreementPath { get; set; }
         public int ClientId { get; set; }
         public string? ClientName { get; set; }
+
+        // only filled in on the single contract endpoint, the list endpoint leaves it null
+        public List<ServiceRequestDto>? ServiceRequests { get; set; }
     }
 
     // what the caller has to send to make a new contract
@@ -31,6 +34,28 @@ namespace TechMove.Api.Dtos
 
         [Required]
         public string ServiceLevel { get; set; } = string.Empty;
+
+        [Required]
+        public int ClientId { get; set; }
+    }
+
+    // full update from the edit screen, status is sent as text and parsed on the api side
+    public class UpdateContractDto
+    {
+        [Required, StringLength(150)]
+        public string Title { get; set; } = string.Empty;
+
+        [Required]
+        public DateTime StartDate { get; set; }
+
+        [Required]
+        public DateTime EndDate { get; set; }
+
+        [Required]
+        public string ServiceLevel { get; set; } = string.Empty;
+
+        [Required]
+        public string Status { get; set; } = string.Empty;
 
         [Required]
         public int ClientId { get; set; }

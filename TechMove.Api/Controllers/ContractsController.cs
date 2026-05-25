@@ -51,7 +51,11 @@ namespace TechMove.Api.Controllers
         {
             var contract = await _contractService.GetByIdAsync(id);
             if (contract == null) return NotFound();
-            return Ok(ToDto(contract));
+
+            // the detail screen also lists the service requests under the contract
+            var dto = ToDto(contract);
+            dto.ServiceRequests = contract.ServiceRequests.Select(ToServiceRequestDto).ToList();
+            return Ok(dto);
         }
 
         [Authorize]
@@ -83,6 +87,31 @@ namespace TechMove.Api.Controllers
 
             var saved = await _contractService.GetByIdAsync(contract.Id);
             return CreatedAtAction(nameof(GetById), new { id = contract.Id }, ToDto(saved!));
+        }
+
+        // full update from the edit screen
+        [Authorize]
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, UpdateContractDto dto)
+        {
+            var contract = await _contractService.GetByIdAsync(id);
+            if (contract == null) return NotFound();
+
+            if (!Enum.TryParse<ContractStatus>(dto.Status, true, out var status))
+                return BadRequest($"'{dto.Status}' is not a valid contract status.");
+
+            if (!await _db.Clients.AnyAsync(c => c.Id == dto.ClientId))
+                return BadRequest($"Client {dto.ClientId} does not exist.");
+
+            contract.Title = dto.Title;
+            contract.StartDate = dto.StartDate;
+            contract.EndDate = dto.EndDate;
+            contract.ServiceLevel = dto.ServiceLevel;
+            contract.Status = status;
+            contract.ClientId = dto.ClientId;
+
+            await _contractService.UpdateAsync(contract);
+            return NoContent();
         }
 
         // PATCH /api/contracts/5/status to approve, decline or put a contract on hold
@@ -147,6 +176,18 @@ namespace TechMove.Api.Controllers
             SignedAgreementPath = c.SignedAgreementPath,
             ClientId = c.ClientId,
             ClientName = c.Client?.Name
+        };
+
+        private static ServiceRequestDto ToServiceRequestDto(ServiceRequest s) => new ServiceRequestDto
+        {
+            Id = s.Id,
+            Description = s.Description,
+            CostUSD = s.CostUSD,
+            CostZAR = s.CostZAR,
+            Status = s.Status,
+            CreatedOn = s.CreatedOn,
+            ContractId = s.ContractId,
+            ContractTitle = s.Contract?.Title
         };
     }
 }

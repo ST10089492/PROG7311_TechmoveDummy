@@ -8,6 +8,9 @@ namespace TechMove.Api.Dtos
         public string Name { get; set; } = string.Empty;
         public string ContactDetails { get; set; } = string.Empty;
         public string Region { get; set; } = string.Empty;
+
+        // the client screens show the contracts that belong to a client
+        public List<ContractDto>? Contracts { get; set; }
     }
 
     public class CreateClientDto
