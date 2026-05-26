@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\TechMove.Web\TechMove.Web.csproj" />
+    <ProjectReference Include="..\TechMove.Api\TechMove.Api.csproj" />
   </ItemGroup>
 
 </Project>

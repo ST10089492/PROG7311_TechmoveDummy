@@ -1,5 +1,5 @@
-using TechMove.Web.Patterns.Strategy;
-using TechMove.Web.Services;
+using TechMove.Api.Patterns.Strategy;
+using TechMove.Api.Services;
 using Xunit;
 
 namespace TechMove.Tests

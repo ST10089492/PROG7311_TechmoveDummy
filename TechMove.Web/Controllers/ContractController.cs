@@ -1,130 +1,165 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using TechMove.Web.Data;
+using TechMove.Web.ApiClients;
 using TechMove.Web.Models;
-using TechMove.Web.Services;
 
 namespace TechMove.Web.Controllers
 {
+    // the contract screens, dropdown data and the contract list all come from the api now
     public class ContractController : Controller
     {
-        private readonly ContractService _contractService; // Handles business logic for contracts (The IIE, 2026)
-        private readonly FileValidationService _fileService; // Handles file validation
-        private readonly AppDbContext _db; //dropdown data
+        private readonly ContractApi _contractApi;
+        private readonly ClientApi _clientApi;
+        private readonly TokenStore _tokenStore;
 
-        public ContractController(ContractService contractService,
-                                  FileValidationService fileService,
-                                  AppDbContext db)
+        public ContractController(ContractApi contractApi, ClientApi clientApi, TokenStore tokenStore)
         {
-            _contractService = contractService;
-            _fileService = fileService;
-            _db = db;
+            _contractApi = contractApi;
+            _clientApi = clientApi;
+            _tokenStore = tokenStore;
         }
 
-        // Displays list of contracts with Filter
         public async Task<IActionResult> Index(DateTime? from, DateTime? to, ContractStatus? status)
         {
-            await _contractService.UpdateStatusesAsync();
-            var contracts = await _contractService.GetAllAsync(from, to, status);
-            ViewBag.From = from?.ToString("yyyy-MM-dd");
-            ViewBag.To = to?.ToString("yyyy-MM-dd");
-            ViewBag.Status = status;
-            return View(contracts);
+            try
+            {
+                var contracts = await _contractApi.GetAllAsync(from, to, status?.ToString());
+                ViewBag.From = from?.ToString("yyyy-MM-dd");
+                ViewBag.To = to?.ToString("yyyy-MM-dd");
+                ViewBag.Status = status;
+                return View(contracts);
+            }
+            catch (HttpRequestException)
+            {
+                return View("ApiUnavailable");
+            }
         }
 
-        // Displays details of a specific contract
         public async Task<IActionResult> Details(int id)
         {
-            var contract = await _contractService.GetByIdAsync(id);
-            if (contract == null) return NotFound();
-            return View(contract);
-        }
-
-        // Returns form for creating a new contract
-        public IActionResult Create()
-        {
-            ViewBag.Clients = new SelectList(_db.Clients, "Id", "Name");
-            ViewBag.ServiceLevels = new SelectList(new[] { "Standard", "Premium", "International" });
-            return View();
-        }
-
-        [HttpPost, ValidateAntiForgeryToken] 
-        public async Task<IActionResult> Create(Contract contract, IFormFile? signedAgreement) // Handles contract creation and file upload
-        {
-            if (signedAgreement != null)
+            try
             {
-                try
-                {
-                    contract.SignedAgreementPath = await _fileService.SaveAsync(signedAgreement);
-                }
-                catch (InvalidOperationException ex)
-                {
-                    ModelState.AddModelError("SignedAgreementPath", ex.Message);
-                }
-            }
-
-            if (!ModelState.IsValid)
-            {
-                ViewBag.Clients = new SelectList(_db.Clients, "Id", "Name");
-                ViewBag.ServiceLevels = new SelectList(new[] { "Standard", "Premium", "International" });
+                var contract = await _contractApi.GetByIdAsync(id);
+                if (contract == null) return NotFound();
                 return View(contract);
             }
-
-            await _contractService.CreateAsync(contract);
-            return RedirectToAction(nameof(Index));
+            catch (HttpRequestException)
+            {
+                return View("ApiUnavailable");
+            }
         }
 
-        public async Task<IActionResult> Edit(int id)  // Returns form for editing a contract
+        public async Task<IActionResult> Create()
         {
-            var contract = await _contractService.GetByIdAsync(id);
-            if (contract == null) return NotFound();
-            ViewBag.Clients = new SelectList(_db.Clients, "Id", "Name", contract.ClientId);
-            ViewBag.ServiceLevels = new SelectList(new[] { "Standard", "Premium", "International" }, contract.ServiceLevel);
-            ViewBag.Statuses = new SelectList(Enum.GetValues<ContractStatus>(), contract.Status);
-            return View(contract);
+            try
+            {
+                await PopulateDropdowns();
+                return View();
+            }
+            catch (HttpRequestException)
+            {
+                return View("ApiUnavailable");
+            }
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, Contract contract, IFormFile? signedAgreement) // Handles contract update and optional file replacement
+        public async Task<IActionResult> Create(Contract contract, IFormFile? signedAgreement)
         {
-            if (id != contract.Id) return BadRequest();
-
-            if (signedAgreement != null)
-            {
-                try
-                {
-                    contract.SignedAgreementPath = await _fileService.SaveAsync(signedAgreement);
-                }
-                catch (InvalidOperationException ex)
-                {
-                    ModelState.AddModelError("SignedAgreementPath", ex.Message);
-                }
-            }
+            if (!_tokenStore.IsLoggedIn) return RedirectToLogin();
 
             if (!ModelState.IsValid)
             {
-                ViewBag.Clients = new SelectList(_db.Clients, "Id", "Name", contract.ClientId);
-                ViewBag.ServiceLevels = new SelectList(new[] { "Standard", "Premium", "International" }, contract.ServiceLevel);
-                ViewBag.Statuses = new SelectList(Enum.GetValues<ContractStatus>(), contract.Status);
+                await PopulateDropdowns(contract);
                 return View(contract);
             }
 
-            await _contractService.UpdateAsync(contract);
+            var result = await _contractApi.CreateAsync(contract);
+            if (!result.Ok)
+            {
+                ModelState.AddModelError(string.Empty, result.Error!);
+                await PopulateDropdowns(contract);
+                return View(contract);
+            }
+
+            // the contract was created, now send the pdf if one was picked
+            if (signedAgreement != null && result.Value != null)
+            {
+                var upload = await _contractApi.UploadAgreementAsync(result.Value.Id, signedAgreement);
+                if (!upload.Ok) TempData["Warning"] = upload.Error;
+            }
+
             return RedirectToAction(nameof(Index));
         }
 
-        public async Task<IActionResult> Delete(int id)   // Returns confirmation view for deleting a contract
+        public async Task<IActionResult> Edit(int id)
         {
-            var contract = await _contractService.GetByIdAsync(id);
+            try
+            {
+                var contract = await _contractApi.GetByIdAsync(id);
+                if (contract == null) return NotFound();
+                await PopulateDropdowns(contract);
+                return View(contract);
+            }
+            catch (HttpRequestException)
+            {
+                return View("ApiUnavailable");
+            }
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> Edit(int id, Contract contract, IFormFile? signedAgreement)
+        {
+            if (id != contract.Id) return BadRequest();
+            if (!_tokenStore.IsLoggedIn) return RedirectToLogin();
+
+            if (!ModelState.IsValid)
+            {
+                await PopulateDropdowns(contract);
+                return View(contract);
+            }
+
+            var result = await _contractApi.UpdateAsync(id, contract);
+            if (!result.Ok)
+            {
+                ModelState.AddModelError(string.Empty, result.Error!);
+                await PopulateDropdowns(contract);
+                return View(contract);
+            }
+
+            if (signedAgreement != null)
+            {
+                var upload = await _contractApi.UploadAgreementAsync(id, signedAgreement);
+                if (!upload.Ok) TempData["Warning"] = upload.Error;
+            }
+
+            return RedirectToAction(nameof(Index));
+        }
+
+        public async Task<IActionResult> Delete(int id)
+        {
+            var contract = await _contractApi.GetByIdAsync(id);
             if (contract == null) return NotFound();
             return View(contract);
         }
 
-        [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken] // Confirmation deletion
+        [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            await _contractService.DeleteAsync(id);
+            if (!_tokenStore.IsLoggedIn) return RedirectToLogin();
+            await _contractApi.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
         }
+
+        // builds the client, service level and status dropdowns from the api
+        private async Task PopulateDropdowns(Contract? contract = null)
+        {
+            var clients = await _clientApi.GetAllAsync();
+            ViewBag.Clients = new SelectList(clients, "Id", "Name", contract?.ClientId);
+            ViewBag.ServiceLevels = new SelectList(new[] { "Standard", "Premium", "International" }, contract?.ServiceLevel);
+            ViewBag.Statuses = new SelectList(Enum.GetValues<ContractStatus>(), contract?.Status);
+        }
+
+        private IActionResult RedirectToLogin()
+            => RedirectToAction("Login", "Account", new { returnUrl = Url.Action(nameof(Index)) });
     }
 }

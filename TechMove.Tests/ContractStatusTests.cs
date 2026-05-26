@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using TechMove.Web.Data;
-using TechMove.Web.Models;
-using TechMove.Web.Services;
+using TechMove.Api.Data;
+using TechMove.Api.Models;
+using TechMove.Api.Services;
 using Xunit;
 
 namespace TechMove.Tests
@@ -17,7 +17,7 @@ namespace TechMove.Tests
         }
 
         private ContractService CreateService(AppDbContext db)
-            => new ContractService(db, Enumerable.Empty<TechMove.Web.Patterns.Observer.IContractObserver>());
+            => new ContractService(db, Enumerable.Empty<TechMove.Api.Patterns.Observer.IContractObserver>());
 
         private Contract MakeContract(DateTime start, DateTime end, ContractStatus status) => new Contract
         {

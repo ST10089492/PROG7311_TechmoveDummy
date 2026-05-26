@@ -1,44 +1,68 @@
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TechMove.Web.Data;
+using TechMove.Web.ApiClients;
 using TechMove.Web.Models;
 
 namespace TechMove.Web.Controllers
 {
-    public class ClientController : Controller //(The IIE, 2026)
+    // no more database here, every action goes through the api (The IIE, 2026)
+    public class ClientController : Controller
     {
-        private readonly AppDbContext _db; //CRUD operations
+        private readonly ClientApi _clientApi;
+        private readonly TokenStore _tokenStore;
 
-        public ClientController(AppDbContext db)
+        public ClientController(ClientApi clientApi, TokenStore tokenStore)
         {
-            _db = db;
+            _clientApi = clientApi;
+            _tokenStore = tokenStore;
         }
 
-        public async Task<IActionResult> Index() // // Displays list of clients with their related contracts
-            => View(await _db.Clients.Include(c => c.Contracts).ToListAsync());
-
-        public async Task<IActionResult> Details(int id) // Displays details for a single client
+        public async Task<IActionResult> Index()
         {
-            var client = await _db.Clients.Include(c => c.Contracts)
-                                          .FirstOrDefaultAsync(c => c.Id == id);
-            if (client == null) return NotFound();
-            return View(client);
+            try
+            {
+                return View(await _clientApi.GetAllAsync());
+            }
+            catch (HttpRequestException)
+            {
+                return View("ApiUnavailable");
+            }
         }
 
-        public IActionResult Create() => View();  // Returns view for creating a new client
+        public async Task<IActionResult> Details(int id)
+        {
+            try
+            {
+                var client = await _clientApi.GetByIdAsync(id);
+                if (client == null) return NotFound();
+                return View(client);
+            }
+            catch (HttpRequestException)
+            {
+                return View("ApiUnavailable");
+            }
+        }
+
+        public IActionResult Create() => View();
 
         [HttpPost, ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Client client)
         {
+            if (!_tokenStore.IsLoggedIn) return RedirectToLogin();
             if (!ModelState.IsValid) return View(client);
-            _db.Clients.Add(client);
-            await _db.SaveChangesAsync();
+
+            var result = await _clientApi.CreateAsync(client);
+            if (!result.Ok)
+            {
+                ModelState.AddModelError(string.Empty, result.Error!);
+                return View(client);
+            }
+
             return RedirectToAction(nameof(Index));
         }
 
-        public async Task<IActionResult> Edit(int id)  // Returns view for editing a new client
+        public async Task<IActionResult> Edit(int id)
         {
-            var client = await _db.Clients.FindAsync(id);
+            var client = await _clientApi.GetByIdAsync(id);
             if (client == null) return NotFound();
             return View(client);
         }
@@ -47,15 +71,22 @@ namespace TechMove.Web.Controllers
         public async Task<IActionResult> Edit(int id, Client client)
         {
             if (id != client.Id) return BadRequest();
+            if (!_tokenStore.IsLoggedIn) return RedirectToLogin();
             if (!ModelState.IsValid) return View(client);
-            _db.Clients.Update(client);
-            await _db.SaveChangesAsync();
+
+            var result = await _clientApi.UpdateAsync(id, client);
+            if (!result.Ok)
+            {
+                ModelState.AddModelError(string.Empty, result.Error!);
+                return View(client);
+            }
+
             return RedirectToAction(nameof(Index));
         }
 
-        public async Task<IActionResult> Delete(int id)  // Returns view for deleting a new client
+        public async Task<IActionResult> Delete(int id)
         {
-            var client = await _db.Clients.FindAsync(id);
+            var client = await _clientApi.GetByIdAsync(id);
             if (client == null) return NotFound();
             return View(client);
         }
@@ -63,9 +94,12 @@ namespace TechMove.Web.Controllers
         [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var client = await _db.Clients.FindAsync(id);
-            if (client != null) { _db.Clients.Remove(client); await _db.SaveChangesAsync(); }
+            if (!_tokenStore.IsLoggedIn) return RedirectToLogin();
+            await _clientApi.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
         }
+
+        private IActionResult RedirectToLogin()
+            => RedirectToAction("Login", "Account", new { returnUrl = Url.Action(nameof(Index)) });
     }
 }

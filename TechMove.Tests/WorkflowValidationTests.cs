@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using TechMove.Web.Data;
-using TechMove.Web.Models;
-using TechMove.Web.Patterns.Strategy;
-using TechMove.Web.Services;
+using TechMove.Api.Data;
+using TechMove.Api.Models;
+using TechMove.Api.Patterns.Strategy;
+using TechMove.Api.Services;
 using Xunit;
 
 namespace TechMove.Tests

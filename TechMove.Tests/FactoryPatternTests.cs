@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using TechMove.Web.Patterns.Factory;
-using TechMove.Web.Services;
+using TechMove.Api.Patterns.Factory;
+using TechMove.Api.Services;
 using Xunit;
 
 namespace TechMove.Tests
@@ -104,11 +104,11 @@ namespace TechMove.Tests
 
         private ContractService CreateContractService()
         {
-            var options = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<TechMove.Web.Data.AppDbContext>()
+            var options = new Microsoft.EntityFrameworkCore.DbContextOptionsBuilder<TechMove.Api.Data.AppDbContext>()
                 .UseInMemoryDatabase("factory_test_" + Guid.NewGuid())
                 .Options;
-            var db = new TechMove.Web.Data.AppDbContext(options);
-            return new ContractService(db, Enumerable.Empty<TechMove.Web.Patterns.Observer.IContractObserver>());
+            var db = new TechMove.Api.Data.AppDbContext(options);
+            return new ContractService(db, Enumerable.Empty<TechMove.Api.Patterns.Observer.IContractObserver>());
         }
     }
 }

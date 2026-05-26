@@ -1,8 +1,8 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Moq;
-using TechMove.Web.Services;
-using static TechMove.Web.Services.FileValidationService;
+using TechMove.Api.Services;
+using static TechMove.Api.Services.FileValidationService;
 using Xunit;
 
 namespace TechMove.Tests

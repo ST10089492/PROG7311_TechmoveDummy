@@ -1,79 +1,112 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using TechMove.Web.Data;
+using TechMove.Web.ApiClients;
 using TechMove.Web.Models;
-using TechMove.Web.Services;
 
 namespace TechMove.Web.Controllers
 {
     public class ServiceRequestController : Controller
     {
-        private readonly ServiceRequestService _srService;
-        private readonly AppDbContext _db;
+        private readonly ServiceRequestApi _srApi;
+        private readonly ContractApi _contractApi;
+        private readonly TokenStore _tokenStore;
 
-        public ServiceRequestController(ServiceRequestService srService, AppDbContext db)
+        public ServiceRequestController(ServiceRequestApi srApi, ContractApi contractApi, TokenStore tokenStore)
         {
-            _srService = srService;
-            _db = db;
+            _srApi = srApi;
+            _contractApi = contractApi;
+            _tokenStore = tokenStore;
         }
 
-        public async Task<IActionResult> Index()  // Displays service requests
-            => View(await _srService.GetAllAsync());
-
-        public async Task<IActionResult> Details(int id) // Displays details of a specific service request
+        public async Task<IActionResult> Index()
         {
-            var sr = await _srService.GetByIdAsync(id);
-            if (sr == null) return NotFound();
-            return View(sr);
+            try
+            {
+                return View(await _srApi.GetAllAsync());
+            }
+            catch (HttpRequestException)
+            {
+                return View("ApiUnavailable");
+            }
         }
 
-        public IActionResult Create(int? contractId) // Returns form for creating a new service request
+        public async Task<IActionResult> Details(int id)
         {
-            ViewBag.Contracts = new SelectList(_db.Contracts.Select(c => new { c.Id, c.Title }), "Id", "Title", contractId);
-            ViewBag.ContractStatuses = _db.Contracts.ToDictionary(c => c.Id, c => c.Status.ToString());
-            return View(new ServiceRequest { ContractId = contractId ?? 0 });
+            try
+            {
+                var sr = await _srApi.GetByIdAsync(id);
+                if (sr == null) return NotFound();
+                return View(sr);
+            }
+            catch (HttpRequestException)
+            {
+                return View("ApiUnavailable");
+            }
+        }
+
+        public async Task<IActionResult> Create(int? contractId)
+        {
+            try
+            {
+                await PopulateContracts(contractId);
+                return View(new ServiceRequest { ContractId = contractId ?? 0 });
+            }
+            catch (HttpRequestException)
+            {
+                return View("ApiUnavailable");
+            }
         }
 
         [HttpPost, ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(ServiceRequest request) // Handles creation of a service request
+        public async Task<IActionResult> Create(ServiceRequest request)
         {
+            if (!_tokenStore.IsLoggedIn) return RedirectToLogin();
+
             if (!ModelState.IsValid)
             {
-                ViewBag.Contracts = new SelectList(_db.Contracts.Select(c => new { c.Id, c.Title }), "Id", "Title", request.ContractId);
-                ViewBag.ContractStatuses = _db.Contracts.ToDictionary(c => c.Id, c => c.Status.ToString());
+                await PopulateContracts(request.ContractId);
                 return View(request);
             }
 
-            try
+            var result = await _srApi.CreateAsync(request);
+            if (!result.Ok)
             {
-                await _srService.CreateAsync(request);
-
-                if (request.CostZAR == 0 && request.CostUSD > 0)
-                    TempData["Warning"] = "Currency API was unavailable. ZAR cost could not be calculated and has been saved as R 0.00. You can edit this request once the API is restored.";
-
-                return RedirectToAction(nameof(Index));
-            }
-            catch (InvalidOperationException ex)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-                ViewBag.Contracts = new SelectList(_db.Contracts.Select(c => new { c.Id, c.Title }), "Id", "Title", request.ContractId);
-                ViewBag.ContractStatuses = _db.Contracts.ToDictionary(c => c.Id, c => c.Status.ToString());
+                ModelState.AddModelError(string.Empty, result.Error!);
+                await PopulateContracts(request.ContractId);
                 return View(request);
             }
+
+            // same warning as part 2 if the currency api could not give us a rate
+            if (result.Value != null && result.Value.CostZAR == 0 && result.Value.CostUSD > 0)
+                TempData["Warning"] = "Currency API was unavailable. ZAR cost could not be calculated and has been saved as R 0.00.";
+
+            return RedirectToAction(nameof(Index));
         }
 
-        public async Task<IActionResult> Delete(int id)  // Returns confirmation view for deleting
+        public async Task<IActionResult> Delete(int id)
         {
-            var sr = await _srService.GetByIdAsync(id);
+            var sr = await _srApi.GetByIdAsync(id);
             if (sr == null) return NotFound();
             return View(sr);
         }
 
         [HttpPost, ActionName("Delete"), ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id) // Handles confirmed deletion
+        public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            await _srService.DeleteAsync(id);
+            if (!_tokenStore.IsLoggedIn) return RedirectToLogin();
+            await _srApi.DeleteAsync(id);
             return RedirectToAction(nameof(Index));
         }
+
+        // the dropdown of contracts plus a small map of contract id to status for the client side warning
+        private async Task PopulateContracts(int? contractId)
+        {
+            var contracts = await _contractApi.GetAllAsync(null, null, null);
+            ViewBag.Contracts = new SelectList(contracts.Select(c => new { c.Id, c.Title }), "Id", "Title", contractId);
+            ViewBag.ContractStatuses = contracts.ToDictionary(c => c.Id, c => c.Status.ToString());
+        }
+
+        private IActionResult RedirectToLogin()
+            => RedirectToAction("Login", "Account", new { returnUrl = Url.Action(nameof(Index)) });
     }
 }
