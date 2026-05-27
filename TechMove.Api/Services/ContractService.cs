@@ -101,6 +101,9 @@ namespace TechMove.Api.Services
             var contract = await _db.Contracts.FindAsync(id);
             if (contract == null) return null;
 
+            // reject status changes that do not make sense (this is the part 2 fix)
+            ContractWorkflow.EnsureCanTransition(contract.Status, status);
+
             contract.Status = status;
             await _db.SaveChangesAsync();
             NotifyObservers(status, contract.Id);

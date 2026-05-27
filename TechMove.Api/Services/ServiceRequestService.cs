@@ -67,6 +67,9 @@ namespace TechMove.Api.Services
             var sr = await _db.ServiceRequests.FindAsync(id);
             if (sr == null) return null;
 
+            // only allow the steps the workflow permits, no jumping straight to Completed etc
+            ServiceRequestWorkflow.EnsureCanTransition(sr.Status, status);
+
             sr.Status = status;
             await _db.SaveChangesAsync();
             return sr;
