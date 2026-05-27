@@ -98,6 +98,19 @@ namespace TechMove.Web.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        // start, complete or cancel a request from the details screen
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangeStatus(int id, string status)
+        {
+            if (!_tokenStore.IsLoggedIn) return RedirectToLogin();
+
+            var result = await _srApi.ChangeStatusAsync(id, status);
+            if (result.Ok) TempData["Success"] = $"Service request status changed to {status}.";
+            else TempData["Warning"] = result.Error;
+
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         // the dropdown of contracts plus a small map of contract id to status for the client side warning
         private async Task PopulateContracts(int? contractId)
         {

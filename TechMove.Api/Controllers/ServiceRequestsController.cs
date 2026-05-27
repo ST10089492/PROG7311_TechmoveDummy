@@ -64,8 +64,15 @@ namespace TechMove.Api.Controllers
         [HttpPatch("{id}/status")]
         public async Task<ActionResult<ServiceRequestDto>> UpdateStatus(int id, StatusUpdateDto dto)
         {
-            var sr = await _srService.ChangeStatusAsync(id, dto.Status);
-            if (sr == null) return NotFound();
+            try
+            {
+                var sr = await _srService.ChangeStatusAsync(id, dto.Status);
+                if (sr == null) return NotFound();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
 
             var updated = await _srService.GetByIdAsync(id);
             return Ok(ToDto(updated!));

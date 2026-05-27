@@ -122,8 +122,15 @@ namespace TechMove.Api.Controllers
             if (!Enum.TryParse<ContractStatus>(dto.Status, true, out var newStatus))
                 return BadRequest($"'{dto.Status}' is not a valid contract status.");
 
-            var contract = await _contractService.ChangeStatusAsync(id, newStatus);
-            if (contract == null) return NotFound();
+            try
+            {
+                var contract = await _contractService.ChangeStatusAsync(id, newStatus);
+                if (contract == null) return NotFound();
+            }
+            catch (InvalidOperationException ex)
+            {
+                return BadRequest(ex.Message);
+            }
 
             var updated = await _contractService.GetByIdAsync(id);
             return Ok(ToDto(updated!));

@@ -86,6 +86,20 @@ namespace TechMove.Web.ApiClients
             }
         }
 
+        // approve, hold, expire or reactivate a contract, the api enforces the workflow rules
+        public async Task<ApiResult> ChangeStatusAsync(int id, string status)
+        {
+            try
+            {
+                var resp = await _http.PatchAsJsonAsync($"api/contracts/{id}/status", new { status });
+                return resp.IsSuccessStatusCode ? ApiResult.Success() : ApiResult.Fail(await ReadError(resp));
+            }
+            catch (HttpRequestException)
+            {
+                return ApiResult.Fail("The API could not be reached. Please try again later.");
+            }
+        }
+
         // posts the signed agreement pdf to the api as multipart form data
         public async Task<ApiResult> UploadAgreementAsync(int id, IFormFile file)
         {

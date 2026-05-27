@@ -1,4 +1,5 @@
 @model TechMove.Web.Models.Contract
+@inject TechMove.Web.ApiClients.TokenStore TokenStore
 @{ ViewData["Title"] = "Contract Details"; }
 
 <h2>@Model.Title</h2>
@@ -33,6 +34,29 @@
         else { <span class="text-muted">Not uploaded</span> }
     </dd>
 </dl>
+
+@if (TokenStore.IsLoggedIn)
+{
+    <div class="card my-3">
+        <div class="card-body">
+            <h5 class="card-title">Change status</h5>
+            <p class="text-muted small">Only the moves allowed by the workflow will be accepted.</p>
+            <div class="d-flex gap-2 flex-wrap">
+                @foreach (var s in Enum.GetValues<TechMove.Web.Models.ContractStatus>())
+                {
+                    @if (s != Model.Status)
+                    {
+                        <form asp-action="ChangeStatus" method="post" class="d-inline">
+                            <input type="hidden" name="id" value="@Model.Id" />
+                            <input type="hidden" name="status" value="@s" />
+                            <button type="submit" class="btn btn-sm btn-outline-primary">@s</button>
+                        </form>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+}
 
 <h4 class="mt-4">Service Requests</h4>
 @if (Model.ServiceRequests.Any())

@@ -150,6 +150,19 @@ namespace TechMove.Web.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        // approve, hold, expire or reactivate from the details screen
+        [HttpPost, ValidateAntiForgeryToken]
+        public async Task<IActionResult> ChangeStatus(int id, string status)
+        {
+            if (!_tokenStore.IsLoggedIn) return RedirectToLogin();
+
+            var result = await _contractApi.ChangeStatusAsync(id, status);
+            if (result.Ok) TempData["Success"] = $"Contract status changed to {status}.";
+            else TempData["Warning"] = result.Error;
+
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
         // builds the client, service level and status dropdowns from the api
         private async Task PopulateDropdowns(Contract? contract = null)
         {

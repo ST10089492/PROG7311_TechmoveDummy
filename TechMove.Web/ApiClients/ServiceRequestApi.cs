@@ -57,6 +57,22 @@ namespace TechMove.Web.ApiClients
             }
         }
 
+        // move the request along its workflow, the api blocks any step that is not allowed
+        public async Task<ApiResult> ChangeStatusAsync(int id, string status)
+        {
+            try
+            {
+                var resp = await _http.PatchAsJsonAsync($"api/servicerequests/{id}/status", new { status });
+                if (resp.IsSuccessStatusCode) return ApiResult.Success();
+                var body = (await resp.Content.ReadAsStringAsync()).Trim('"');
+                return ApiResult.Fail(string.IsNullOrWhiteSpace(body) ? "The request was rejected by the API." : body);
+            }
+            catch (HttpRequestException)
+            {
+                return ApiResult.Fail("The API could not be reached. Please try again later.");
+            }
+        }
+
         public async Task<ApiResult> DeleteAsync(int id)
         {
             try
