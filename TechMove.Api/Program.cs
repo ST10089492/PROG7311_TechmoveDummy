@@ -95,10 +95,12 @@ app.UseAuthorization();
 app.MapControllers();
 
 // run migrations on startup so the database is ready when the container comes up
+// the IsRelational check lets the in memory database used by the integration tests skip this
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
+    if (db.Database.IsRelational())
+        db.Database.Migrate();
 }
 
 app.Run();
