@@ -1,0 +1,60 @@
+# spins up the whole system, the three containers talk to each other by service name
+# on the internal techmove-net network (The IIE, 2026)
+services:
+
+  sql-server-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Your_strong_Pass123"
+    ports:
+      - "1433:1433"
+    healthcheck:
+      # the api waits until this passes so it does not try to migrate before sql is ready
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q 'SELECT 1' -b -o /dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - techmove-net
+
+  techmove-api:
+    build:
+      context: ./TechMove.Api
+      dockerfile: Dockerfile
+    environment:
+      # connection string points at the database container by its service name
+      ConnectionStrings__DefaultConnection: "Server=sql-server-db,1433;Database=TechMoveDb;User Id=sa;Password=Your_strong_Pass123;TrustServerCertificate=True"
+      Jwt__Key: "techmove-dev-signing-key-change-me-in-production-1234567890"
+      Jwt__Issuer: "TechMove.Api"
+      Jwt__Audience: "TechMove.Web"
+      Auth__Username: "admin"
+      Auth__Password: "Admin123!"
+      ASPNETCORE_ENVIRONMENT: "Development"
+    ports:
+      - "5080:8080"
+    depends_on:
+      sql-server-db:
+        condition: service_healthy
+    networks:
+      - techmove-net
+
+  techmove-web:
+    build:
+      context: ./TechMove.Web
+      dockerfile: Dockerfile
+    environment:
+      # the frontend reaches the api by its service name over the internal network
+      ApiBaseUrl: "http://techmove-api:8080"
+      ASPNETCORE_ENVIRONMENT: "Development"
+    ports:
+      - "5000:8080"
+    depends_on:
+      - techmove-api
+    networks:
+      - techmove-net
+
+networks:
+  techmove-net:
+    driver: bridge
