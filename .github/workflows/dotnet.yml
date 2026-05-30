@@ -1,0 +1,29 @@
+name: CI
+
+# build and run every test on each push and pull request so broken changes get caught early
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore TechMove.sln
+
+      - name: Build
+        run: dotnet build TechMove.sln --no-restore -c Release
+
+      - name: Test
+        run: dotnet test TechMove.sln --no-build -c Release --verbosity normal
