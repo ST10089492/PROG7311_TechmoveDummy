@@ -1,58 +1,48 @@
-# TechMove (PROG7311 POE Part 3)
+# TechMove - PROG7311 Part 3
 
-Logistics contract management system for the PROG7311 portfolio. Part 3 splits the Part 2 monolith into a Service-Oriented Architecture: an ASP.NET Core Web API backend, an MVC frontend that calls the API over HTTP, and a SQL Server database, all runnable with Docker Compose.
+This is my Part 3 for PROG7311. In Part 2 everything sat in one MVC project. For Part 3 I split it up so all the database work happens in a separate Web API, and the MVC site just calls that api over http. There is also a docker compose file so the whole thing can run together in containers.
 
-## Projects
+## The projects
 
-- **TechMove.Api** - the Web API, the only project that talks to the database. Holds the EF Core context, the Factory / Observer / Strategy patterns, the services, JWT auth and Swagger.
-- **TechMove.Web** - the MVC frontend. No database access, it calls the API with typed `HttpClient` services and keeps the JWT in session.
-- **TechMove.Tests** - xUnit unit tests and `WebApplicationFactory` integration tests.
+- TechMove.Api - the web api. this is the only project that touches the database. it has the ef core context, the design patterns from part 1 (factory, observer, strategy), the services, the jwt login and swagger.
+- TechMove.Web - the mvc site. it has no database of its own, it gets everything from the api with httpclient and keeps the login token in session.
+- TechMove.Tests - the xunit tests, the normal unit tests plus some integration tests that actually call the api.
 
-## Running with Docker (the whole system)
+## Running it in Visual Studio
 
-From the solution root:
+You have to run the api and the web project at the same time, otherwise the site cant reach the api and you just get an "unavailable" page. Right click the solution, choose set startup projects, pick multiple startup projects and put TechMove.Api and TechMove.Web both on Start.
 
-```
-docker compose up --build
-```
+The api runs on https://localhost:7257 and swagger opens by itself. The web site already knows that address from its appsettings.json. First time you run it you might need to do Update-Database in the package manager console, or just let the api make the database when it starts.
 
-This starts three containers on one network:
+## Running it with docker
 
-| Service | What it is | URL |
-|---|---|---|
-| `sql-server-db` | SQL Server 2022 | localhost:1433 |
-| `techmove-api` | Web API + Swagger | http://localhost:5080/swagger |
-| `techmove-web` | MVC frontend | http://localhost:5000 |
+From the folder the solution is in:
 
-The API waits for the database health check before it migrates and starts. The frontend reaches the API by its service name (`http://techmove-api:8080`) on the internal network.
+    docker compose up --build
 
-## Running locally in Visual Studio
+That brings up three containers, the sql server, the api and the web site. The site comes up on http://localhost:5000 and the api swagger on http://localhost:5080/swagger. The containers find each other by name so the web reaches the api on http://techmove-api:8080.
 
-1. Start **TechMove.Api** (runs on https://localhost:7257, Swagger opens automatically).
-2. Start **TechMove.Web** (its `ApiBaseUrl` in `appsettings.json` already points at the API).
-3. Update the database the first time with `Update-Database` in the Package Manager Console, or just let the API migrate on startup.
+## Logging in
 
-## Login
+You can look at all the list and details pages without logging in. To create, edit, delete or change a status you have to log in first. The account is:
 
-Browsing (all the index and details pages) is open to everyone. Creating, editing, deleting and changing status requires logging in with the seeded account:
+username: admin
+password: Admin123!
 
-- Username: `admin`
-- Password: `Admin123!`
+## Tests
 
-## Running the tests
+    dotnet test TechMove.sln
 
-```
-dotnet test TechMove.sln
-```
+They also run on github actions every time i push, the workflow file is in .github/workflows.
 
-The same suite runs automatically in GitHub Actions on every push (see `.github/workflows/dotnet.yml`).
+## The api endpoints
 
-## Key endpoints
+the main ones are:
 
-- `GET /api/contracts` (supports `from`, `to`, `status` filters)
-- `POST /api/contracts`, `PUT /api/contracts/{id}`, `PATCH /api/contracts/{id}/status`
-- `POST /api/contracts/{id}/agreement` (PDF upload)
-- `GET/POST /api/clients`, `GET/POST /api/servicerequests`, `PATCH /api/servicerequests/{id}/status`
-- `POST /api/auth/login`
+- GET /api/contracts (can filter by from, to and status)
+- POST /api/contracts, PUT /api/contracts/{id}, PATCH /api/contracts/{id}/status
+- POST /api/contracts/{id}/agreement for the signed pdf
+- the clients and servicerequests endpoints work the same kind of way
+- POST /api/auth/login to get the token
 
-The technical reflection report is in `docs/Technical-Reflection-Report.md`.
+my reflection report is in the docs folder.
