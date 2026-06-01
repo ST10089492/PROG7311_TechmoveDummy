@@ -12,4 +12,6 @@ FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS final
 WORKDIR /app
 EXPOSE 8080
 COPY --from=build /app/publish .
+# run as the built in non root user instead of root
+USER app
 ENTRYPOINT ["dotnet", "TechMove.Web.dll"]
