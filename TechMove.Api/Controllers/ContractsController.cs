@@ -1,7 +1,5 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TechMove.Api.Data;
 using TechMove.Api.Dtos;
 using TechMove.Api.Models;
 using TechMove.Api.Services;
@@ -16,15 +14,15 @@ namespace TechMove.Api.Controllers
     {
         private readonly ContractService _contractService;
         private readonly FileValidationService _fileService;
-        private readonly AppDbContext _db;
+        private readonly ClientService _clientService;
 
         public ContractsController(ContractService contractService,
                                    FileValidationService fileService,
-                                   AppDbContext db)
+                                   ClientService clientService)
         {
             _contractService = contractService;
             _fileService = fileService;
-            _db = db;
+            _clientService = clientService;
         }
 
         // GET /api/contracts with optional date range and status filtering
@@ -62,7 +60,7 @@ namespace TechMove.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<ContractDto>> Create(CreateContractDto dto)
         {
-            if (!await _db.Clients.AnyAsync(c => c.Id == dto.ClientId))
+            if (!await _clientService.ExistsAsync(dto.ClientId))
                 return BadRequest($"Client {dto.ClientId} does not exist.");
 
             var contract = new Contract
@@ -100,7 +98,7 @@ namespace TechMove.Api.Controllers
             if (!Enum.TryParse<ContractStatus>(dto.Status, true, out var status))
                 return BadRequest($"'{dto.Status}' is not a valid contract status.");
 
-            if (!await _db.Clients.AnyAsync(c => c.Id == dto.ClientId))
+            if (!await _clientService.ExistsAsync(dto.ClientId))
                 return BadRequest($"Client {dto.ClientId} does not exist.");
 
             contract.Title = dto.Title;
@@ -141,12 +139,10 @@ namespace TechMove.Api.Controllers
         [HttpPost("{id}/agreement")]
         public async Task<IActionResult> UploadAgreement(int id, IFormFile file)
         {
-            var contract = await _db.Contracts.FindAsync(id);
-            if (contract == null) return NotFound();
-
+            string savedPath;
             try
             {
-                contract.SignedAgreementPath = await _fileService.SaveAsync(file);
+                savedPath = await _fileService.SaveAsync(file);
             }
             catch (InvalidOperationException ex)
             {
@@ -157,8 +153,10 @@ namespace TechMove.Api.Controllers
                 return BadRequest("No file was provided.");
             }
 
-            await _db.SaveChangesAsync();
-            return Ok(new { contract.SignedAgreementPath });
+            if (!await _contractService.SetAgreementPathAsync(id, savedPath))
+                return NotFound();
+
+            return Ok(new { SignedAgreementPath = savedPath });
         }
 
         [Authorize]

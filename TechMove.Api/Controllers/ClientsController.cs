@@ -1,37 +1,34 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using TechMove.Api.Data;
 using TechMove.Api.Dtos;
 using TechMove.Api.Models;
+using TechMove.Api.Services;
 
 namespace TechMove.Api.Controllers
 {
-    // clients are plain crud so the controller can talk to the context directly
-    // there is no business rule on a client (The IIE, 2026)
+    // the client crud goes through ClientService now, the controller just maps to and from dtos
     [ApiController]
     [Route("api/[controller]")]
     public class ClientsController : ControllerBase
     {
-        private readonly AppDbContext _db;
+        private readonly ClientService _clientService;
 
-        public ClientsController(AppDbContext db)
+        public ClientsController(ClientService clientService)
         {
-            _db = db;
+            _clientService = clientService;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<ClientDto>>> GetAll()
         {
-            var clients = await _db.Clients.Include(c => c.Contracts).ToListAsync();
+            var clients = await _clientService.GetAllAsync();
             return Ok(clients.Select(ToDto));
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<ClientDto>> GetById(int id)
         {
-            var client = await _db.Clients.Include(c => c.Contracts)
-                                          .FirstOrDefaultAsync(c => c.Id == id);
+            var client = await _clientService.GetByIdAsync(id);
             if (client == null) return NotFound();
             return Ok(ToDto(client));
         }
@@ -47,9 +44,7 @@ namespace TechMove.Api.Controllers
                 Region = dto.Region
             };
 
-            _db.Clients.Add(client);
-            await _db.SaveChangesAsync();
-
+            await _clientService.CreateAsync(client);
             return CreatedAtAction(nameof(GetById), new { id = client.Id }, ToDto(client));
         }
 
@@ -57,14 +52,14 @@ namespace TechMove.Api.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, CreateClientDto dto)
         {
-            var client = await _db.Clients.FindAsync(id);
-            if (client == null) return NotFound();
+            var updated = new Client
+            {
+                Name = dto.Name,
+                ContactDetails = dto.ContactDetails,
+                Region = dto.Region
+            };
 
-            client.Name = dto.Name;
-            client.ContactDetails = dto.ContactDetails;
-            client.Region = dto.Region;
-            await _db.SaveChangesAsync();
-
+            if (!await _clientService.UpdateAsync(id, updated)) return NotFound();
             return NoContent();
         }
 
@@ -72,11 +67,7 @@ namespace TechMove.Api.Controllers
         [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(int id)
         {
-            var client = await _db.Clients.FindAsync(id);
-            if (client == null) return NotFound();
-
-            _db.Clients.Remove(client);
-            await _db.SaveChangesAsync();
+            if (!await _clientService.DeleteAsync(id)) return NotFound();
             return NoContent();
         }
 

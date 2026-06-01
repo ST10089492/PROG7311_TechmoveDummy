@@ -32,6 +32,7 @@ builder.Services.AddScoped<IContractObserver, BillingService>();
 builder.Services.AddScoped<IContractObserver, ComplianceService>();
 
 // Application services
+builder.Services.AddScoped<ClientService>();
 builder.Services.AddScoped<ContractService>();
 builder.Services.AddScoped<ServiceRequestService>();
 builder.Services.AddScoped<FileValidationService>();

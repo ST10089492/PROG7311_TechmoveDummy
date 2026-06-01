@@ -11,17 +11,25 @@ namespace TechMove.Api.Services
     public class ContractService : IContractSubject
     {
         private readonly AppDbContext _db;
-        private readonly IEnumerable<IContractObserver> _observers;
+        private readonly List<IContractObserver> _observers;
 
         public ContractService(AppDbContext db, IEnumerable<IContractObserver> observers)
         {
             _db = db;
-            _observers = observers;
+            // di gives us the starting observers, keep them in a list so we can add or remove at runtime
+            _observers = observers.ToList();
         }
 
-        // Observers are registered through DI in Program.cs
-        public void RegisterObserver(IContractObserver observer) { }
-        public void RemoveObserver(IContractObserver observer) { }
+        public void RegisterObserver(IContractObserver observer)
+        {
+            if (!_observers.Contains(observer))
+                _observers.Add(observer);
+        }
+
+        public void RemoveObserver(IContractObserver observer)
+        {
+            _observers.Remove(observer);
+        }
 
         public void NotifyObservers(ContractStatus newStatus, int contractId)
         {
@@ -92,6 +100,17 @@ namespace TechMove.Api.Services
                 _db.Contracts.Remove(c);
                 await _db.SaveChangesAsync();
             }
+        }
+
+        // saves the uploaded pdf path against the contract, returns false if the contract is gone
+        public async Task<bool> SetAgreementPathAsync(int id, string path)
+        {
+            var contract = await _db.Contracts.FindAsync(id);
+            if (contract == null) return false;
+
+            contract.SignedAgreementPath = path;
+            await _db.SaveChangesAsync();
+            return true;
         }
 
         // moves a contract to a new status and tells the observers about it
